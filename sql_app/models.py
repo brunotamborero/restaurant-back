@@ -1,5 +1,6 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean, DateTime, func, Date
 from sqlalchemy.orm import relationship
+from enum import Enum
 
 from .database import Base
 
@@ -23,15 +24,17 @@ class Restaurant(Base):
     name = Column(String, index=True)
     currency = Column(String, default='euro')
     location = Column(String, index=True)
-    phone = Column(Integer)
+    phone = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="restaurants")
 
-    dishes = relationship("Dish", back_populates="menu")
-    restauranttables = relationship("RestaurantTable", back_populates="distribution")
+    dishes = relationship("Dish", cascade='all,delete', back_populates="menu")
+    restauranttables = relationship("RestaurantTable", cascade='all,delete', back_populates="distribution")
 
-    orders_restaurant = relationship("Order", back_populates="restaurant_order")
+    orders_restaurant = relationship("Order", cascade='all,delete', back_populates="restaurant_order")
+
+
 
 
 class Dish(Base):
@@ -40,7 +43,7 @@ class Dish(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     description = Column(String)
-    suitableDiet = Column(Integer)
+    suitableDiet = Column(String)
     price = Column(Float)
     restaurant_menu_id = Column(Integer, ForeignKey("restaurants.id"))
     menu = relationship("Restaurant", back_populates="dishes")
@@ -51,6 +54,7 @@ class RestaurantTable(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     capacity = Column(Integer)
+    table_number = Column(Integer)
     restaurant_location_id = Column(Integer, ForeignKey("restaurants.id"))
     distribution = relationship("Restaurant", back_populates="restauranttables")
     orders_table = relationship("Order", back_populates="table_orders")

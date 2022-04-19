@@ -121,19 +121,32 @@ def get_dish(db: Session, dish_id: int):
 def get_restaurant(db: Session, restaurant_id: int):
     return db.query(models.Restaurant).filter(models.Restaurant.id == restaurant_id).first()
 
+def delete_restaurant(db: Session, restaurant_id: int):
+    db_restaurant = get_restaurant(db, restaurant_id=restaurant_id)
+    if db_restaurant is None:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    db.delete(db_restaurant)
+    db.commit()
+    return db_restaurant
+
+def delete_table(db: Session, table_id: int):
+    db_table = db.query(models.RestaurantTable).filter(models.RestaurantTable.id == table_id).first()
+    if db_table is None:
+        raise HTTPException(status_code=404, detail="Table not found")
+    db.delete(db_table)
+    db.commit()
+    return db_table
+
+def delete_dish(db: Session, dish_id: int):
+    db_dish = db.query(models.Dish).filter(models.Dish.id == dish_id).first()
+    if db_dish is None:
+        raise HTTPException(status_code=404, detail="Dish not found")
+    db.delete(db_dish)
+    db.commit()
+    return db_dish
 
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
-
-
-
-
-def create_user_restaurant(db: Session, restaurant: schemas.RestaurantCreate, user_id: int):
-    db_restaurant = models.Restaurant(**restaurant.dict(), owner_id=user_id)
-    db.add(db_restaurant)
-    db.commit()
-    db.refresh(db_restaurant)
-    return db_restaurant
 
 
 def get_restaurants_user(db: Session, user_id: int):
@@ -163,6 +176,8 @@ def create_restaurant_tables(db: Session, restauranttable: schemas.RestaurantTab
 def get_restaurant_tables(db, restaurant_id: int):
     return db.query(models.RestaurantTable).filter(models.RestaurantTable.restaurant_location_id == restaurant_id).all()
 
+def get_restaurant_table(db, restaurant_id: int, table_id: int):
+    return db.query(models.RestaurantTable).filter((models.RestaurantTable.table_number == table_id) & (models.RestaurantTable.restaurant_location_id == restaurant_id)).first()
 
 def create_order(db: Session, order: schemas.OrderCreate):
     db_order = models.Order(**order.dict())
@@ -175,6 +190,17 @@ def create_order(db: Session, order: schemas.OrderCreate):
 def get_order(db: Session, order_id: int):
     return db.query(models.Order).filter(models.Order.id == order_id).first()
 
+def get_current_orders_user(db: Session, user_id: int):
+    return db.query(models.Order).filter((models.Order.customer_id == user_id) & (models.Order.completed == 'false')).all()
+
+def get_finished_orders_user(db: Session, user_id: int):
+    return db.query(models.Order).filter((models.Order.customer_id == user_id) & (models.Order.completed == 'true')).all()
+
+def get_current_orders_restaurant(db: Session, restaurant_id: int):
+    return db.query(models.Order).filter((models.Order.restaurant_id == restaurant_id) & (models.Order.completed == 'false')).all()
+
+def get_finished_orders_restaurant(db: Session, restaurant_id: int):
+    return db.query(models.Order).filter((models.Order.restaurant_id == restaurant_id) & (models.Order.completed == 'true')).all()
 
 def add_dishes_order(order_id: int, order_dishes: schemas.Group_Order_dishes, db: Session):
     total_amount = 0
@@ -186,10 +212,25 @@ def add_dishes_order(order_id: int, order_dishes: schemas.Group_Order_dishes, db
         total_amount = total_amount + price_dishes
         db_order_dishes.name_dish = dish.name
         db_order_dishes.price_dish = dish.price
-
         db.add(db_order_dishes)
         db.commit()
         db.refresh(db_order_dishes)
+    db.query(models.Order).filter(models.Order.id == order_id).first().total_amount += total_amount
+    db.commit()
+    return db.query(models.Order).filter(models.Order.id == order_id).first()
+
+def add_dishes_order_one(order_id: int, order_dish: schemas.Order_dishesBase, db: Session):
+    total_amount = 0
+    db_order_dish = models.Order_Dish(**order_dish.dict())
+    order_dish.detail_id_order = order_id
+    dish = get_dish(db, db_order_dish.detail_id_dish)
+    price_dishes = dish.price * order_dish.quantity
+    total_amount = total_amount + price_dishes
+    order_dish.name_dish = dish.name
+    order_dish.price_dish = dish.price
+    db.add(order_dish)
+    db.commit()
+    db.refresh(order_dish)
     db.query(models.Order).filter(models.Order.id == order_id).first().total_amount += total_amount
     db.commit()
     return db.query(models.Order).filter(models.Order.id == order_id).first()

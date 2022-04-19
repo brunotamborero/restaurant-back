@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -29,7 +30,7 @@ class Group_Order_dishes(BaseModel):
 
 class OrderBase(BaseModel):
     number_costumers: int
-    customer_id: int
+    customer_id: Optional[int]
     restaurant_id: int
     table_id: int
 
@@ -52,6 +53,8 @@ class Order(OrderBase):
 
 class RestaurantTableBase(BaseModel):
     capacity: int
+    table_number: int
+
 
 
 class RestaurantTableCreate(RestaurantTableBase):
@@ -62,15 +65,19 @@ class RestaurantTable(RestaurantTableBase):
     id: int
     restaurant_location_id: int
 
+
     class Config:
         orm_mode = True
 
+class SuitableDiet(str, Enum):
+    VEGAN = 'Vegan'
+    VEGETARIAN = 'Vegetarian'
 
 class DishBase(BaseModel):
     name: str
     price: float
     description: Optional[str] = None
-    suitableDiet: Optional[int] = None
+    suitableDiet: Optional[SuitableDiet] = None
 
 
 class DishCreate(DishBase):
@@ -84,12 +91,16 @@ class Dish(DishBase):
     class Config:
         orm_mode = True
 
+class CurrencyType(str, Enum):
+    EURO = 'Euro'
+    DOLLAR = 'Dollar'
+    POUND = 'Pound'
 
 class RestaurantBase(BaseModel):
     name: str
-    currency: Optional[str] = 'euro'
+    currency: Optional[CurrencyType] = 'euro'
     location: Optional[str] = None
-    phone: Optional[int] = None
+    phone: Optional[str] = None
 
 
 class RestaurantCreate(RestaurantBase):
@@ -110,6 +121,9 @@ class Restaurant(RestaurantBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    name: str
+    id: int
+
 
 
 class TokenData(BaseModel):
